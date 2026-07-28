@@ -6608,10 +6608,7 @@ class SessionManager:
                         getattr(event.source, "thread_id", None),
                     )
                     return False
-            # Route through resolve_inbox so _durable_resume runs (the button path
-            # already goes through resolve_inbox; the reply path was calling
-            # inbox.resolve directly, skipping durable resume).
-            return self.resolve_inbox(item_id, resolution)
+            return self.inbox.resolve(item_id, resolution)
 
         return resolve_from_reply(text, _resolve) is not None
 
