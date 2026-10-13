@@ -895,7 +895,7 @@ export interface Connector {
   mcp?: boolean; // MCP-backed one-click (vendor-hosted MCP + local OAuth — no cloud sign-in)
   allowed_users: string[]; // the allow-list (managed inline in the Connectors tab)
   allowed_user_names?: Record<string, string | null>; // id → display name (people directory)
-  approval_owner_ids?: string[]; // Manual Slack: humans allowed to resolve approvals
+  approval_owner_ids?: string[]; // Manual Slack / Telegram: humans allowed to resolve approvals
   approval_owner_names?: Record<string, string | null>;
   recent?: RecentSender[]; // recently-seen senders on a connected two-way connector
   unauthorized?: ParkedMessage[]; // parked messages from unallowed senders (§19)
@@ -2418,6 +2418,11 @@ export interface ProviderInfo {
   recommended_model: string | null; // pre-filled default for this provider (e.g. qwen3-coder:30b)
   blurb?: string; // one-line note under the title ("Uses X's OpenAI-compatible API…")
   key_set_at?: string | null; // ISO date the key was last (re)saved — absent for env-only config
+  // Where the key comes from: saved in Settings, the provider's environment variable, or
+  // nowhere. "env" keys cannot be removed from the app, so the card hides "Remove key" and
+  // names the variable instead (#742). Absent on an older backend → treated as "store".
+  key_source?: "store" | "env" | null;
+  env_key?: string | null; // the variable's name, when it is set
   last_used_at?: number | null; // epoch secs the provider last served a completion
   // OAuth providers (auth === "oauth"): browser sign-in instead of a key form.
   auth?: string | null;
@@ -2956,6 +2961,32 @@ export async function removeSlackApprovalOwner(
   userId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch(`${httpBase()}/v1/connectors/slack/approval-owners/remove`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  return res.json();
+}
+
+export async function addTelegramApprovalOwner(
+  userId: string,
+  displayName?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/connectors/telegram/approval-owners/add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: userId,
+      ...(displayName ? { name: displayName } : {}),
+    }),
+  });
+  return res.json();
+}
+
+export async function removeTelegramApprovalOwner(
+  userId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await fetch(`${httpBase()}/v1/connectors/telegram/approval-owners/remove`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId }),
